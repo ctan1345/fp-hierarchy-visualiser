@@ -14,3 +14,6 @@
 /.spago/
 /*.log
 /.parcel-cache
+
+# Local Netlify folder
+.netlify

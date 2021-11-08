@@ -140,7 +140,11 @@ mkHome = do
       R.div
         { className: "mt-5 p-4 bg-gray-300 rounded"
         , children:
-            [ R.pre
+            [ R.h1
+                { className: "text-red-600 text-lg py-6"
+                , children: [ R.text $ "There are total of " <> (show <<< List.length $ trees) <> " invalid paths" ]
+                }
+            , R.pre
                 { children: renderInvalidTrees trees
                 }
             ]

@@ -1,7 +1,7 @@
 # Hierarchy visualiser
 
 ### Using Purescript Nextjs example [next-purescript-example](https://github.com/jonasbuntinx/next-purescript-example)
-### [Demo](https://next-purescript-example.netlify.app/)
+### [Demo](https://fp-hierarchy-visualiser.netlify.app/)
 
 ## Build Setup
 
