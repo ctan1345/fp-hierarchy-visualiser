@@ -1,0 +1,51 @@
+{
+  "name": "next-purescript-example",
+  "version": "0.2.0",
+  "description": "Example app using Next.js with Purescript",
+  "keywords": [
+    "Next.js",
+    "Purescript",
+    "React",
+    "SSR"
+  ],
+  "author": "Jonas Buntinx",
+  "license": "MIT",
+  "scripts": {
+    "analyze": "cross-env ANALYZE=true spago build",
+    "build": "yarn build:clean && yarn build:spago && yarn build:dce && yarn build:next",
+    "build:clean": "rm -Rf corefn output",
+    "build:spago": "spago build --purs-args '--output corefn --codegen corefn'",
+    "build:dce": "bash scripts/zephyr.sh",
+    "build:next": "next build",
+    "clean": "rm -Rf .cache .next output corefn node_modules .spago *.lock",
+    "dev": "yarn dev:clean && yarn dev:build && yarn dev:serve",
+    "dev:clean": "rm -Rf output",
+    "dev:build": "spago build",
+    "dev:serve": "spago build --watch & next -p 4000",
+    "start": "yarn build && next start",
+    "test": "spago test"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "^3.9.2",
+    "purescript": "^0.14.5",
+    "purty": "^7.0.0",
+    "spago": "^0.20.3",
+    "zephyr": "https://github.com/jonasbuntinx/zephyr.git"
+  },
+  "dependencies": {
+    "@next/bundle-analyzer": "^12.0.2",
+    "autoprefixer": "^10.4.0",
+    "cross-env": "^7.0.3",
+    "next": "^12.0.2",
+    "next-plugin-preact": "^3.0.6",
+    "postcss": "^8.3.11",
+    "preact": "^10.5.15",
+    "preact-render-to-string": "^5.1.19",
+    "react": "npm:@preact/compat@0.0.4",
+    "react-dom": "npm:@preact/compat@0.0.4",
+    "react-ssr-prepass": "npm:preact-ssr-prepass@1.1.3",
+    "string-replace-loader": "^3.0.3",
+    "tailwindcss": "^2.2.19",
+    "xhr2": "^0.2.1"
+  }
+}
