@@ -15,6 +15,7 @@ import Data.Map (SemigroupMap(..), empty)
 import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (class Newtype, unwrap)
+import Data.String as String
 import Data.Traversable (sequence)
 import Data.Tree (Forest, Tree, appendChild, mkTree)
 import Data.Tuple (Tuple(..))
@@ -50,7 +51,7 @@ emptyTreeBuilder = TreeBuilder (SemigroupMap empty)
 parseTree :: String -> Either String (Tree TreeNode)
 parseTree text = do
   csv <- lmap _.error $ CSV.parse text
-  hier <- sequence $ note "Row does not have enough columns to build tree" <<< fromList <<< toHierarchy <$> csv
+  hier <- sequence $ note "Row does not have enough columns to build tree" <<< fromList <<< toHierarchy <$> map String.trim <$> csv
 
   let result = foldl builderFold $ toList <$> hier
   let tree = mkTree root $ toTree result
