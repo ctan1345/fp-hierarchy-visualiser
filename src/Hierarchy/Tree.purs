@@ -103,6 +103,13 @@ appendAtLevel level f  = go 0
     Nothing -> t
     Just child -> appendChild child t
 
+removeLevel :: ∀ a. Int -> Tree a -> Tree a
+removeLevel level tree = go level tree (tail tree)
+  where
+  go :: Int -> Tree a -> List (Tree a) -> Tree a
+  go l parent child | l > 0 = head parent :< ((\c -> go (l - 1) c (tail c)) <$> child)
+  go _ parent child = head parent :< (tail =<< child)
+
 firstBranch :: Tree ~> List
 firstBranch t = head t : fromMaybe Nil (firstBranch <$> (L.head $ tail t))
 
