@@ -33,6 +33,7 @@
   , "web-file"
   , "web-html"
   , "strings"
+  , "record-extra"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

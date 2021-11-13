@@ -10,28 +10,30 @@ import Control.Promise (Promise, fromAff)
 import Data.Array as Array
 import Data.Either (hush)
 import Data.Foldable (foldl)
+import Data.Int (fromString)
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.Monoid (guard)
 import Data.Newtype (unwrap)
-import Data.Tree (Tree, Forest)
+import Data.Tree (Forest, Tree, mkTree)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import Effect.Console as Console
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
 import Foreign (readString)
-import Hierarchy.Tree (firstBranch, removeLevel)
 import Hierarchy.Tree as Tree
-import Hierarchy.Validate (ValidatedNode, checkValid, isValid)
+import Hierarchy.Tree (appendAtLevel, firstBranch, joinTree, removeLevel)
+import Hierarchy.Validate (ValidatedNode(..), checkValid, isValid)
 import React.Basic.DOM (css)
 import React.Basic.DOM as R
-import React.Basic.DOM.Events (targetFiles)
+import React.Basic.DOM.Events (targetFiles, targetValue)
 import React.Basic.Events (handler, handler_)
 import React.Basic.Hooks (JSX)
 import React.Basic.Hooks as React
 import Record as Record
+import Record.Extra (sequenceRecord)
 import Sample.Sample (sampleData)
 import Type.Proxy (Proxy(..))
 import Web.Event.EventTarget (addEventListener, eventListener)
@@ -50,21 +52,26 @@ mkHome = do
     settings <- React.useContext env.settings
     showConfig /\ setShowConfig <- React.useState false
     showLevels /\ setShowLevels <- React.useState Map.empty
+    augmentConfig /\ setAugmentConfig <- React.useState { level: Nothing, name: Nothing, code: Nothing }
     rawData /\ setRawData <- React.useState Nothing
     tree <-
       React.useMemo rawData \_ -> do
         case rawData of
           Nothing -> Nothing
           Just d -> hush $ checkValid <$> Tree.parseTree d
+    augmentedTree <-
+      React.useMemo (tree /\ augmentConfig) \_ -> do
+        maybe tree (\t -> pure $ maybe t (\{ level, name, code } -> augmentAtLevel level name code t) (sequenceRecord augmentConfig)) tree
     prunedTree <-
-      React.useMemo (tree /\ showLevels) \_ ->
-        maybe tree
-          ( \t -> do
+      React.useMemo (augmentedTree /\ showLevels) \_ ->
+        maybe augmentedTree
+          ( \t ->
               let
                 fns = removeLevel <$> (List.sortBy (flip compare) $ List.fromFoldable (Map.keys $ Map.filter (eq false) showLevels))
-              pure $ foldl (\t' f -> f t') t fns
+              in
+                pure $ foldl (\t' f -> f t') t fns
           )
-          tree
+          augmentedTree
     invalidPaths <-
       React.useMemo tree \_ -> do
         case tree of
@@ -77,7 +84,7 @@ mkHome = do
     React.useEffect settings do
       Console.log $ fromMaybe "No settings" settings
       mempty
-    pure $ render props { tree, prunedTree, invalidPaths, showConfig, showLevels } { setRawData, setShowConfig, setShowLevels }
+    pure $ render props { tree, prunedTree, invalidPaths, showConfig, showLevels, augmentConfig } { setRawData, setShowConfig, setShowLevels, setAugmentConfig }
   where
   render props state handlers =
     React.fragment
@@ -135,7 +142,7 @@ mkHome = do
           }
       , R.div
           { className: guard (not state.showConfig) "invisible"
-          , children: [ renderConfigPanel state.tree state.showLevels handlers.setShowConfig handlers.setShowLevels ]
+          , children: [ renderConfigPanel state.tree state.showLevels state.augmentConfig handlers.setShowConfig handlers.setShowLevels handlers.setAugmentConfig ]
           }
       , R.div
           { className: guard state.showConfig "invisible"
@@ -181,7 +188,7 @@ mkHome = do
           ]
       }
 
-  renderConfigPanel tree showLevels setShowConfig setShowLevels =
+  renderConfigPanel tree showLevels augmentConfig setShowConfig setShowLevels setAugmentConfig =
     R.div
       { className: "top-0 fixed h-screen w-1/4 bg-blue-200 transition duration-200 shadow"
       , children:
@@ -227,6 +234,56 @@ mkHome = do
                                           <$> (List.mapWithIndex (\i n -> i /\ ("Level " <> (show $ i + 1) <> " (" <> (unwrap n).name <> ")")) $ List.drop 1 $ firstBranch t)
                                     )
                                     tree
+                              }
+                          ]
+                      }
+                  , R.div
+                      { className: "flex-grow"
+                      , children:
+                          [ R.h3
+                              { className: "font-semibold"
+                              , children: [ R.text "Modify tree" ]
+                              }
+                          , guard (isJust tree)
+                              R.div
+                              { className: ""
+                              , children:
+                                  [ R.div
+                                      { className: "my-2"
+                                      , children:
+                                          [ R.label { className: "px-2", children: [ R.text "Augment from level" ] }
+                                          , R.input
+                                              { type: "number"
+                                              , value: show $ fromMaybe 0 $ augmentConfig.level
+                                              , onChange: handler targetValue (\level -> (setAugmentConfig \s -> s { level = fromString =<< level }))
+                                              }
+                                          ]
+                                      }
+                                  , R.div
+                                      { className: "my-2"
+                                      , children:
+                                          [ R.label { className: "px-2", children: [ R.text "Node name" ] }
+                                          , R.input
+                                              { type: "text"
+                                              , placeholder: "unassigned"
+                                              , value: fromMaybe "" $ augmentConfig.name
+                                              , onChange: handler targetValue (\name -> (setAugmentConfig \s -> s { name = name }))
+                                              }
+                                          ]
+                                      }
+                                  , R.div
+                                      { className: "my-2"
+                                      , children:
+                                          [ R.label { className: "px-2", children: [ R.text "Node code" ] }
+                                          , R.input
+                                              { type: "text"
+                                              , placeholder: "unassigned"
+                                              , value: fromMaybe "" $ augmentConfig.code
+                                              , onChange: handler targetValue (\code -> (setAugmentConfig \s -> s { code = code }))
+                                              }
+                                          ]
+                                      }
+                                  ]
                               }
                           ]
                       }
@@ -278,6 +335,9 @@ renderValidatedTree = drawTree 0
 
 renderInvalidTrees :: forall a. List (Tree ({ code :: String, name :: String, level :: Int | a })) -> Array JSX
 renderInvalidTrees trees = R.p_ <<< Array.singleton <$> R.text <<< (\n -> "level " <> show n.level <> ": " <> n.code <> " (" <> n.name <> ")") <<< head <$> Array.fromFoldable trees
+
+augmentAtLevel :: Int -> String -> String -> Tree ValidatedNode -> Tree ValidatedNode
+augmentAtLevel level code name tree = appendAtLevel level (\_ t -> joinTree $ (\_ -> mkTree (ValidatedNode { code: (unwrap (head t)).code <> "-" <> code, name, isValid: true }) Nil) <$> (fromMaybe Nil $ List.tail $ firstBranch t)) tree
 
 fetchData :: forall ctx. ctx -> Aff Props
 fetchData _ = do
