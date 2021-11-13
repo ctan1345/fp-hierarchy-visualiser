@@ -23,8 +23,8 @@ import Effect.Aff (Aff)
 import Effect.Console as Console
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
 import Foreign (readString)
-import Hierarchy.Tree as Tree
 import Hierarchy.Tree (appendAtLevel, firstBranch, joinTree, removeLevel)
+import Hierarchy.Tree as Tree
 import Hierarchy.Validate (ValidatedNode(..), checkValid, isValid)
 import React.Basic.DOM (css)
 import React.Basic.DOM as R
@@ -87,68 +87,71 @@ mkHome = do
     pure $ render props { tree, prunedTree, invalidPaths, showConfig, showLevels, augmentConfig } { setRawData, setShowConfig, setShowLevels, setAugmentConfig }
   where
   render props state handlers =
-    React.fragment
-      [ R.div
-          { className: "max-w-5xl flex mx-auto my-12 flex-col"
-          , children:
-              [ R.ol
-                  { children:
-                      [ R.li_ [ R.text "Upload a CSV file with format [code_1, name_1, blank, code_2, name_2, blank, ..., code_n, name_n, blank]" ]
-                      , R.li_
-                          [ R.div
-                              { className: "flex"
-                              , children:
-                                  [ R.input
-                                      { type: "file"
-                                      , onChange:
-                                          handler targetFiles \files -> do
-                                            _ <-
-                                              runMaybeT do
-                                                fileList <- MaybeT $ pure files
-                                                reader <- lift fileReader
-                                                f <- MaybeT $ pure $ item 0 fileList
-                                                lift $ readAsText (toBlob f) reader
-                                                let
-                                                  et = toEventTarget reader
-                                                loadListener <-
-                                                  lift
-                                                    $ eventListener \_ -> do
-                                                        res <- result reader
-                                                        handlers.setRawData \_ -> hush $ (runExcept $ readString res)
-                                                lift $ addEventListener EventTypes.load loadListener false et
+    R.div
+      { className: "flex flex-col"
+      , children:
+          [ R.div
+              { className: "max-w-5xl flex mx-auto my-12 flex-col"
+              , children:
+                  [ R.ol
+                      { children:
+                          [ R.li_ [ R.text "Upload a CSV file with format [code_1, name_1, blank, code_2, name_2, blank, ..., code_n, name_n, blank]" ]
+                          , R.li_
+                              [ R.div
+                                  { className: "flex"
+                                  , children:
+                                      [ R.input
+                                          { type: "file"
+                                          , onChange:
+                                              handler targetFiles \files -> do
+                                                _ <-
+                                                  runMaybeT do
+                                                    fileList <- MaybeT $ pure files
+                                                    reader <- lift fileReader
+                                                    f <- MaybeT $ pure $ item 0 fileList
+                                                    lift $ readAsText (toBlob f) reader
+                                                    let
+                                                      et = toEventTarget reader
+                                                    loadListener <-
+                                                      lift
+                                                        $ eventListener \_ -> do
+                                                            res <- result reader
+                                                            handlers.setRawData \_ -> hush $ (runExcept $ readString res)
+                                                    lift $ addEventListener EventTypes.load loadListener false et
+                                                    pure unit
                                                 pure unit
-                                            pure unit
-                                      }
-                                  , R.a
-                                      { className: "text-teal-700 hover:text-teal-600"
-                                      , href: "#"
-                                      , onClick: handler_ (handlers.setRawData \_ -> Just sampleData)
-                                      , children:
-                                          [ R.text "OR Use the example Australian Geography file" ]
-                                      }
-                                  , R.a
-                                      { className: "text-blue-700 hover:text-blue-600 pl-4"
-                                      , href: "/sample"
-                                      , children: [ R.text " (click to see raw file)" ]
-                                      }
-                                  ]
-                              }
+                                          }
+                                      , R.a
+                                          { className: "text-teal-700 hover:text-teal-600"
+                                          , href: "#"
+                                          , onClick: handler_ (handlers.setRawData \_ -> Just sampleData)
+                                          , children:
+                                              [ R.text "OR Use the example Australian Geography file" ]
+                                          }
+                                      , R.a
+                                          { className: "text-blue-700 hover:text-blue-600 pl-4"
+                                          , href: "/sample"
+                                          , children: [ R.text " (click to see raw file)" ]
+                                          }
+                                      ]
+                                  }
+                              ]
                           ]
-                      ]
-                  }
-              , renderHierarchy state.prunedTree
-              , renderInvalidPaths state.invalidPaths
-              ]
-          }
-      , R.div
-          { className: guard (not state.showConfig) "invisible"
-          , children: [ renderConfigPanel state.tree state.showLevels state.augmentConfig handlers.setShowConfig handlers.setShowLevels handlers.setAugmentConfig ]
-          }
-      , R.div
-          { className: guard state.showConfig "invisible"
-          , children: [ renderConfigButton handlers.setShowConfig ]
-          }
-      ]
+                      }
+                  , renderHierarchy state.prunedTree
+                  , renderInvalidPaths state.invalidPaths
+                  ]
+              }
+          , R.div
+              { className: guard (not state.showConfig) "invisible"
+              , children: [ renderConfigPanel state.tree state.showLevels state.augmentConfig handlers.setShowConfig handlers.setShowLevels handlers.setAugmentConfig ]
+              }
+          , R.div
+              { className: guard state.showConfig "invisible"
+              , children: [ renderConfigButton handlers.setShowConfig ]
+              }
+          ]
+      }
 
   renderHierarchy =
     maybe mempty \tree ->
